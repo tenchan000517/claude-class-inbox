@@ -1,6 +1,23 @@
 # claude-class-inbox
 
-授業で **先生から生徒の Claude Code セッションへ remote で指示を届ける** ための setup パッケージ。Syncthing（推奨）or Google Drive で `~/claude-class-inbox/` を端末間同期し、tmux + watcher で Claude Code pane に自動投入。
+授業で **先生から生徒の Claude Code セッションへ remote で指示を届ける** ための setup パッケージ。Syncthing（推奨）or Google Drive で `inbox/` を端末間同期し、tmux + watcher で Claude Code pane に自動投入。
+
+---
+
+## ⚠️ 安全設計（最重要）
+
+Claude Code の auto mode は **cwd 内では制限なく操作する**。`~` や `C:\` を cwd にして起動すると、誤判断時に **Windows ドキュメントごと消える** リスクあり。
+
+**本パッケージは `/mnt/c/task/class/` 配下に固定** することで auto mode の blast radius を /mnt/c/task/class/ 以下に閉じる。
+
+```
+/mnt/c/task/class/                  ← cwd（auto mode の安全圏）
+├── claude-class-inbox/             ← clone した package（scripts / SETUP / .env）
+└── inbox/                          ← syncthing 同期 folder（メッセージ実体）
+    ├── all/ / teacher/ / student-<id>/
+```
+
+clone 先 / sync folder / cwd すべて `/mnt/c/task/class/` 配下。**この path を逸脱した場合、skill は動作を拒否します**。
 
 ---
 
@@ -8,18 +25,25 @@
 
 自分の Claude Code に以下を伝えてください：
 
-> `https://github.com/tenchan000517/claude-class-inbox` をクローンして、SETUP.md を読んでセットアップしてください。
+> `https://github.com/tenchan000517/claude-class-inbox` を `/mnt/c/task/class/claude-class-inbox/` にクローンして、SETUP.md を読んでセットアップしてください。
 
 これで以下が自動で完了します：
 
-- tmux + Syncthing（or Drive）インストール確認
-- 必要情報（student-id・tmux session 名・同期フォルダ path）の確認
+- `/mnt/c/task/class/` の作成（必要に応じて）
+- tmux + Syncthing インストール確認
+- 必要情報（student-id・tmux session 名）の確認
 - `.env` 書き出し
-- `~/.claude/skills/class-inbox/` への skill 登録
+- `~/.claude/skills/class-inbox/` への skill 登録（cwd 安全圏チェック付き）
 - watcher の background 起動
 - 日常運用フローの案内（attach / detach / 再起動）
 
-setup 完了後は、Claude Code 内で `/class-inbox` や「クラスメッセージ確認」と発言すれば skill が起動して inbox を確認・操作できます。
+setup 完了後、毎回のレクで生徒が必要なのは：
+
+1. VS Code → **WSL Ubuntu ターミナル** を開く（cmd / PowerShell ではない）
+2. `cd /mnt/c/task/class/`
+3. `tmux new -s claude` → `claude`
+4. Claude Code 内で「**授業準備**」or `/class-inbox start`
+5. skill が syncthing 起動 + watcher 起動 + 新着メッセージ表示 まで自動
 
 ---
 
@@ -27,68 +51,67 @@ setup 完了後は、Claude Code 内で `/class-inbox` や「クラスメッセ�
 
 ### Option A: Syncthing（推奨）
 
-P2P 同期。中央サーバ不要・Google アカウント不要・LAN なら高速・cross-network も OK・完全 open source。授業の教材価値も高い。
+P2P 同期・中央サーバ不要・cross-network OK・教材価値高い。
 
-#### 1. Syncthing のインストール
+#### 1. install
 
-| OS | 方法 |
+| OS | コマンド |
 |---|---|
 | Ubuntu / WSL | `sudo apt install syncthing` |
 | Mac | `brew install syncthing` |
-| Windows | https://syncthing.net/downloads/ から SyncTrayzor |
+| Windows native | https://github.com/canton7/SyncTrayzor/releases |
 
-#### 2. Syncthing 起動 + 自分の Device ID 確認
+#### 2. 起動 + Device ID 取得
 
 ```bash
-syncthing
+nohup syncthing serve --no-browser > /tmp/syncthing.log 2>&1 &
+syncthing cli show system | grep myID
 ```
 
-Web UI（http://localhost:8384）が開く。右上「Actions」→「Show ID」で自分の Device ID を確認（`XXXX-XXXX-...` 形式）。
+Web UI: http://localhost:8384
 
-#### 3. ローカル folder 作成 + Syncthing に登録
+#### 3. folder 構造の作成 + Syncthing 登録
 
 ```bash
-mkdir -p ~/claude-class-inbox/inbox/{all,teacher,student-kawai,student-kawasaki}
+mkdir -p /mnt/c/task/class/inbox/{all,teacher,student-kawai,student-kawasaki}
 ```
 
-Web UI で「Add Folder」：
-- Folder Path: `~/claude-class-inbox`（or 同期したい path）
-- Folder ID: 任意（例: `class-inbox-2026`）
+Web UI「フォルダーを追加」：
+- Folder Label: `class-inbox`
+- Folder ID: `class-inbox-2026`
+- Folder Path: `/mnt/c/task/class/inbox`
 
-#### 4. 生徒 Device の追加 + folder 共有
-
-生徒から Device ID をもらったら、Web UI「Add Remote Device」で追加。share 対象 folder にチェック。
-
-#### 5. メッセージ送信
+#### 4. package を clone
 
 ```bash
-git clone https://github.com/tenchan000517/claude-class-inbox.git
-cd claude-class-inbox
+git clone https://github.com/tenchan000517/claude-class-inbox.git /mnt/c/task/class/claude-class-inbox
+```
+
+#### 5. 生徒の Device 追加 + folder 共有
+
+生徒から Device ID をもらったら、Web UI「接続先デバイスを追加」で追加。share 対象 folder にチェック。
+
+#### 6. メッセージ送信
+
+```bash
+cd /mnt/c/task/class/claude-class-inbox
 bash teacher/send.sh kawai today-task body.md
 echo "今日の課題: ..." | bash teacher/send.sh all today-task -
 ```
 
-数秒で生徒 PC に同期される。
-
----
-
 ### Option B: Google Drive（フォールバック）
 
-Syncthing が動かない環境（企業 / 学校ネットワークで Syncthing ポート遮断等）向け。
-
-1. Drive for desktop インストール（https://www.google.com/drive/download/）
-2. ストリーム モードで OK（実 disk 使用は metadata のみ）
-3. My Drive 直下に `claude-class-inbox/inbox/{all,teacher,student-<id>}/` を作成
-4. 各生徒 Google アカウントに `claude-class-inbox/` を編集者権限で共有招待
+Syncthing が動かない環境向け。同期 folder 先は `/mnt/c/task/class/inbox/` で固定。
 
 ---
 
 ### クラウドクリーンアップ（節目で実施）
 
 ```bash
-bash teacher/cleanup.sh --dry-run --target all     # 事前確認
-bash teacher/cleanup.sh --target all               # 全員宛をクリーン
-bash teacher/cleanup.sh --target everything        # 学期末・全クリーン
+cd /mnt/c/task/class/claude-class-inbox
+bash teacher/cleanup.sh --dry-run --target all
+bash teacher/cleanup.sh --target all
+bash teacher/cleanup.sh --target everything    # 学期末・全クリーン
 ```
 
 ---
@@ -96,12 +119,12 @@ bash teacher/cleanup.sh --target everything        # 学期末・全クリーン
 ## アーキテクチャ
 
 ```
-先生 PC                   同期層                       生徒 PC
-                         (Syncthing / Drive)
- teacher/send.sh ---> ~/claude-class-inbox/inbox/kawai/ ---> watcher
-                  \                                    \
-                   --> ~/claude-class-inbox/inbox/all/  --> tmux send-keys
-                                                         --> Claude Code pane
+先生 PC                       同期層                       生徒 PC
+                            (Syncthing / Drive)
+ teacher/send.sh ---> /mnt/c/task/class/inbox/kawai/ ---> watcher
+                  \                                  \
+                   --> /mnt/c/task/class/inbox/all/   --> tmux send-keys
+                                                      --> Claude Code pane
 ```
 
 詳細は [SETUP.md](./SETUP.md) を参照。
@@ -111,23 +134,20 @@ bash teacher/cleanup.sh --target everything        # 学期末・全クリーン
 ## ディレクトリ構造
 
 ```
-claude-class-inbox/
-├── README.md            # 本ファイル
-├── CLAUDE.md            # Claude Code 自動 load 用 orientation
-├── SETUP.md             # 初期セットアップ手順（Claude が follow する）
-├── scripts/             # 生徒側ツール
-│   ├── student-watch.sh   # 常駐 watcher
-│   ├── archive.sh         # 自分宛 inbox の local archive
-│   ├── install-skill.sh   # skill 登録
-│   └── skill-template.md  # skill SKILL.md テンプレ
-├── teacher/             # 先生専用ツール（生徒は実行しない）
-│   ├── send.sh            # メッセージ送信
-│   ├── cleanup.sh         # クラウドクリーンアップ（破壊的）
+/mnt/c/task/class/claude-class-inbox/        # cloned git repo
+├── README.md                                # 本ファイル
+├── CLAUDE.md                                # Claude Code 自動 load 用 orientation
+├── SETUP.md                                 # 初期セットアップ手順
+├── scripts/                                 # 生徒側ツール
+│   ├── student-watch.sh
+│   ├── archive.sh
+│   ├── install-skill.sh
+│   └── skill-template.md
+├── teacher/                                 # 先生専用ツール
+│   ├── send.sh
+│   ├── cleanup.sh
 │   └── README.md
-└── inbox/               # サンプル inbox 構造（.gitkeep のみ）
-    ├── all/
-    ├── student-alice/
-    └── student-bob/
+└── inbox/                                   # サンプル（実際は ../inbox/ を使う）
 ```
 
 ---
@@ -141,7 +161,6 @@ claude-class-inbox/
 | 全員宛 inbox を local copy | ◯（read-only） | ◯ |
 | 全員宛 inbox をクリーン | ✕ | ◯ |
 | 他生徒 inbox をクリーン | ✕ | ◯ |
-| 先生宛 inbox をクリーン | ✕ | ◯ |
 | 学期末の全クリーン | ✕ | ◯ |
 
 ---
@@ -149,9 +168,9 @@ claude-class-inbox/
 ## 更新時
 
 ```bash
-cd <package-path>
+cd /mnt/c/task/class/claude-class-inbox
 git pull
-bash scripts/install-skill.sh    # skill を再生成
+bash scripts/install-skill.sh
 ```
 
 ---

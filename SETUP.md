@@ -1,14 +1,38 @@
 # Setup 手順（Claude Code 用）
 
-Claude Code がこの package を読んだ時に follow する setup 手順です。生徒（ユーザー）に対話で確認しながら進めてください。
+Claude Code がこの package を読んだ時に follow する setup 手順。生徒（ユーザー）に対話で確認しながら、1 ステップずつ進めてください。
 
-## Step 0: package path の確定
+---
 
-このファイル（SETUP.md）が置かれているディレクトリの絶対パスを記録してください。以降 `<PACKAGE_DIR>` と呼びます。
+## ⚠️ Step 0: 安全圏チェック（最重要）
+
+最初に必ず確認：
 
 ```bash
-PACKAGE_DIR=$(cd "$(dirname "${0:-./SETUP.md}")" && pwd)
+pwd
 ```
+
+以下のいずれかに該当しなければ **作業を中断** して、生徒に移動を促してください：
+
+- 結果が `/mnt/c/task/class/...` で始まっている
+- 結果が `/mnt/c/task/class/claude-class-inbox` である（clone 直後・推奨）
+
+該当しない場合の案内：
+
+> **危険な場所で動いています**。Claude Code は cwd 内では何でも操作できます。`~` や `C:\` 配下で動いていると、誤判断で大事なファイルが消えるリスクがあります。
+>
+> 一度この Claude Code を停止して、以下を実行してから再度起動してください：
+>
+> ```bash
+> mkdir -p /mnt/c/task/class
+> cd /mnt/c/task/class
+> tmux new -s claude
+> claude
+> ```
+
+該当する場合のみ、以下を続けます。
+
+---
 
 ## Step 1: tmux + 同期サービスの確認
 
@@ -18,29 +42,25 @@ PACKAGE_DIR=$(cd "$(dirname "${0:-./SETUP.md}")" && pwd)
 which tmux
 ```
 
-無ければインストール手順を案内：
+未 install なら：
 
-| OS | コマンド |
-|---|---|
-| Ubuntu / WSL | `sudo apt install tmux` |
-| Mac | `brew install tmux` |
-| Windows | WSL2 + Ubuntu を入れてその中で `sudo apt install tmux` |
+> Syncthing をインストールします。**別の WSL Ubuntu ターミナルを開いて**（VS Code 下部メニュー → ターミナル → 新規 → WSL Ubuntu を選択）、以下を実行してください。パスワードを聞かれたら入力：
+>
+> ```bash
+> sudo apt update && sudo apt install -y tmux
+> ```
 
-### 1.2 同期サービス（Syncthing 推奨・Drive はフォールバック）
+### 1.2 同期サービス（Syncthing 推奨）
 
-Claude Code は以下を順番に確認・案内してください。**1 ステップずつ生徒の応答を待つ**こと（一気に説明しない）。
-
-#### Syncthing の場合（推奨）
-
-##### 1.2.1 install チェック
+#### 1.2.1 install チェック
 
 ```bash
 which syncthing
 ```
 
-未 install なら以下を案内：
+未 install なら（生徒に丁寧に案内）：
 
-> Syncthing をインストールします。**別の WSL ターミナルを開いて** 以下を実行してください。パスワードを聞かれたら入力してください。
+> Syncthing をインストールします。**別の WSL Ubuntu ターミナルを開いて** 以下を実行してください。パスワードを聞かれたら入力してください。
 >
 > ```bash
 > sudo apt update && sudo apt install -y syncthing
@@ -48,102 +68,86 @@ which syncthing
 >
 > install 完了したら教えてください。
 
-（Mac の場合は `brew install syncthing`、Windows native の場合は SyncTrayzor https://github.com/canton7/SyncTrayzor/releases）
-
-##### 1.2.2 syncthing 起動
+#### 1.2.2 syncthing 起動
 
 ```bash
 ps -ef | grep "[s]yncthing serve" | head -3
 ```
 
-起動していなければ案内：
-
-> Syncthing を起動します。以下を別ターミナルで実行（このターミナルを閉じると停止するので、`tmux new -s syncthing` 内で動かすか `nohup ... &` で background 起動を推奨）：
->
-> ```bash
-> nohup syncthing serve --no-browser > /tmp/syncthing.log 2>&1 &
-> ```
->
-> 確認：`curl -s http://localhost:8384 | head -3` で HTML が返れば OK。
-
-##### 1.2.3 Device ID 取得
+未起動なら：
 
 ```bash
-syncthing cli show system 2>/dev/null | grep '"myID"'
+nohup syncthing serve --no-browser > /tmp/syncthing.log 2>&1 &
 ```
-
-または Web UI（http://localhost:8384）右上「Actions」→「Show ID」で QR コード付きで表示される。
-
-> あなたの Device ID は **`XXXX-XXXX-...`** です。これを先生に送ってください（LINE / Slack / メール何でも OK）。
-
-##### 1.2.4 先生からの folder 共有を待つ
-
-> 先生があなたの Device ID を承認して `claude-class-inbox` フォルダを共有すると、Web UI に「New Folder ... wants to share」の通知が出ます。
->
-> 受け入れ時に local path を **`~/claude-class-inbox`** に設定してください。
 
 確認：
 
 ```bash
-ls ~/claude-class-inbox/inbox/ 2>/dev/null
+sleep 3 && curl -s http://localhost:8384 | head -3
+```
+
+HTML が返れば OK。
+
+#### 1.2.3 Device ID 取得
+
+```bash
+syncthing cli show system 2>/dev/null | grep myID
+```
+
+> あなたの Device ID は **`XXXX-XXXX-...`** です。これを先生に送ってください（LINE / Slack / メール何でも OK）。
+
+#### 1.2.4 先生からの folder 共有を待つ
+
+> 先生があなたの Device ID を承認して `claude-class-inbox` フォルダを共有すると、Web UI（http://localhost:8384）に「New Folder ... wants to share」の通知が出ます。
+>
+> 受け入れ時に local path を **`/mnt/c/task/class/inbox`** に設定してください（`~/claude-class-inbox` ではない・安全圏に置くため）。
+
+確認：
+
+```bash
+ls /mnt/c/task/class/inbox/ 2>/dev/null
 ```
 
 `all/` / `teacher/` / 自分の `student-<id>/` が見えれば同期成功。
 
-#### Drive for desktop の場合（フォールバック）
-
-Syncthing が動かない環境（企業 / 学校で port 遮断等）向け。
-
-1. Drive for desktop 起動済か？
-2. 先生から `claude-class-inbox/` フォルダの共有招待を受け入れたか？
-3. `~/Google Drive/My Drive/claude-class-inbox/` または `~/Library/CloudStorage/GoogleDrive-<account>/My Drive/claude-class-inbox/` が見えるか？（OS により path 異なる）
+---
 
 ## Step 2: 生徒情報の確認
 
-生徒に以下を質問する：
+生徒に質問：
 
-- **student-id**：先生から指定された ID（例：`alice`、`bob`）
-- **tmux session 名**：Claude Code を起動する session 名（default: `claude`）
-- **同期フォルダ path**：クラウド同期サービス（Dropbox / Syncthing / Google Drive 等）が `~/claude-class-inbox/` に同期するよう設定済か確認。違うパスなら教えてもらう（default: `$HOME/claude-class-inbox`）
+- **student-id**：先生から指定された ID（例：`kawai`、`kawasaki`）
+- **tmux session 名**：default は `claude`
 
-## Step 3: inbox 構造の確認
+---
 
-同期フォルダに以下が存在するか確認：
+## Step 3: 設定ファイルを書き出す
 
-```
-<sync-root>/inbox/all/
-<sync-root>/inbox/<student-id>/
-```
-
-無ければ作成：
-
-```bash
-mkdir -p <sync-root>/inbox/all <sync-root>/inbox/<student-id>
-```
-
-注：先生側で既に作成済みの場合はクラウド同期で降ってくるはず。降ってこない場合は先生に確認するよう案内。
-
-## Step 4: 設定ファイルを書き出す
-
-`<PACKAGE_DIR>/.env` に確定した設定を記録：
+`<PACKAGE_DIR>/.env` に記録（PACKAGE_DIR は cwd の親 = `/mnt/c/task/class/claude-class-inbox` 想定）：
 
 ```bash
 cat > <PACKAGE_DIR>/.env <<EOF
 STUDENT_ID=<student-id>
 CLAUDE_SESSION=<session-name>
-SYNC_ROOT=<sync-root>
+SYNC_ROOT=/mnt/c/task/class
 EOF
 ```
 
-## Step 5: skill を登録
+注: SYNC_ROOT は `/mnt/c/task/class`（inbox の親）。
+
+---
+
+## Step 4: skill を登録
 
 ```bash
 bash <PACKAGE_DIR>/scripts/install-skill.sh
 ```
 
-これで `~/.claude/skills/class-inbox/SKILL.md` が生成される（package path と生徒情報が埋め込まれる）。
+`~/.claude/skills/class-inbox/SKILL.md` が生成される（cwd 安全圏チェック + package path + 生徒情報が埋め込まれる）。
 
-## Step 6: watcher を起動
+---
+
+## Step 5: watcher を起動
 
 ```bash
 cd <PACKAGE_DIR>
@@ -156,100 +160,51 @@ nohup env $(cat .env | xargs) bash scripts/student-watch.sh > /tmp/class-inbox-w
 ps -ef | grep student-watch | grep -v grep
 ```
 
-## Step 7: 日常運用フローの案内
+---
 
-setup が終わっただけでは生徒は Claude Code を使えません。**毎日の起動・離脱・再 attach** の流れを生徒に明示してください。
+## Step 6: 日常運用フローの案内
 
-### 7.1 初回の Claude Code 起動
+setup 完了。生徒に以下を明示伝達：
 
-別ターミナルを開いて：
+### 6.1 毎回のレクで必要な操作
 
-```bash
-tmux new -s <session-name>    # 例: tmux new -s claude
-```
+1. VS Code を開く
+2. 下部メニュー → ターミナル → 新規 → **WSL Ubuntu** を選択（cmd / PowerShell ではない）
+3. `cd /mnt/c/task/class/`
+4. `tmux new -s claude` （session が既にあれば `tmux attach -t claude`）
+5. `claude`
+6. Claude Code 内で「**授業準備**」or `/class-inbox start` と発言
+7. skill が自動で syncthing 起動 / watcher 起動 / 新着メッセージ表示
 
-これで tmux session が立ち上がり、自動的に attach 状態になる。中で：
+### 6.2 離脱 / 復帰
 
-```bash
-claude
-```
+| 操作 | コマンド |
+|---|---|
+| tmux session から離脱（落とさない） | `Ctrl-b` → `d` |
+| 戻る | `tmux attach -t claude` |
+| session 一覧 | `tmux ls` |
+| 完全終了 | `tmux kill-session -t claude` |
 
-これで Claude Code が起動。先生からメッセージが来るとここに自動投入される。
+### 6.3 PC 再起動後
 
-### 7.2 セッションを残したまま離脱（detach）
+PC を再起動すると tmux / syncthing / watcher 全部止まる。再起動後は 6.1 の流れを最初からやり直し。
 
-PC を閉じる時や別作業に移る時：
-
-```
-Ctrl-b → d
-```
-
-Claude Code は tmux 内で動き続ける。ターミナルから抜けても OK。
-
-### 7.3 戻る（attach）
-
-```bash
-tmux attach -t <session-name>    # 例: tmux attach -t claude
-```
-
-中で Claude Code がそのまま動いている状態に戻れる。会話履歴も残っている。
-
-### 7.4 session 一覧確認
-
-```bash
-tmux ls
-```
-
-`claude: 1 windows (created ...)` のように表示されれば稼働中。
-
-### 7.5 session を完全に終了させたい時
-
-```bash
-tmux kill-session -t <session-name>
-```
-
-（普段は kill する必要なし。detach で十分）
-
-### 7.6 watcher の状態確認 / 再起動
-
-watcher は setup 時に background 起動済。状態確認：
-
-```bash
-ps -ef | grep student-watch | grep -v grep
-```
-
-止まっていたら再起動：
-
-```bash
-pkill -f student-watch.sh
-cd <PACKAGE_DIR> && nohup env $(cat .env | xargs) bash scripts/student-watch.sh > /tmp/class-inbox-watcher.log 2>&1 &
-```
-
-### 7.7 skill 経由の操作
+### 6.4 skill 経由の操作
 
 Claude Code 内（tmux attach 後）で：
 
-- `/class-inbox` で skill を呼び出し
+- `/class-inbox` で skill 起動
 - 「クラスメッセージ確認」「先生に返信」等の自然言語でも反応
-- 新着があれば一覧表示、Read で開く、返信 Write など
+- `/class-inbox archive` で local 保存（容量整理）
 
-### 7.8 PC 再起動後
-
-PC を再起動すると tmux session も watcher も止まる。再起動後は：
-
-```bash
-# 1. tmux で Claude Code 起動
-tmux new -s <session-name>
-# 中で claude
-
-# 2. 別ターミナルで watcher 再起動（7.6 の再起動コマンド）
-```
-
-頻繁に再起動するなら、watcher を起動する shell 関数や alias を `.bashrc` に書いておくと楽。
+---
 
 ## トラブル時の確認ポイント
 
-- tmux session が稼働中か：`tmux ls`
-- watcher が稼働中か：`ps -ef | grep student-watch`
-- 同期フォルダにファイルが届くか：`ls <sync-root>/inbox/<student-id>/`
+- 安全圏か：`pwd` が `/mnt/c/task/class/` 配下か
+- tmux 稼働：`tmux ls`
+- syncthing 稼働：`ps -ef | grep syncthing | grep -v grep`
+- watcher 稼働：`ps -ef | grep student-watch | grep -v grep`
+- 同期 folder にファイル：`ls /mnt/c/task/class/inbox/<self>/`
 - watcher log：`tail /tmp/class-inbox-watcher.log`
+- syncthing log：`tail /tmp/syncthing.log`
