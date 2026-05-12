@@ -44,13 +44,19 @@ which tmux
 
 未 install なら：
 
-> tmux をインストールします。**別の WSL Ubuntu ターミナルを開いて**（VS Code 下部メニュー → ターミナル → 新規 → WSL Ubuntu を選択）、以下を実行してください。パスワードを聞かれたら入力：
+> tmux をインストールします。**別の WSL ウィンドウを開きます**：
+>
+> `Ctrl+Shift+P`（Command Palette）→ `WSL: Connect to WSL in New Window` を選択
+>
+> 新しい VS Code ウィンドウが WSL Ubuntu モードで開きます。そのウィンドウで `Ctrl+\`` でターミナルを開いて：
 >
 > ```bash
 > sudo apt update && sudo apt install -y tmux
 > ```
 >
-> install 完了したら、このターミナルに戻って「インストール完了」と伝えてください。
+> パスワードを聞かれたら入力。install 完了したら、最初の Claude Code ターミナルに戻って「インストール完了」と伝えてください。
+>
+> **このウィンドウは閉じないでください**。Syncthing の install 等で再利用します。
 
 ### 1.2 同期サービス（Syncthing 推奨）
 
@@ -62,11 +68,13 @@ which syncthing
 
 未 install なら（生徒に丁寧に案内）：
 
-> Syncthing をインストールします。**別の WSL Ubuntu ターミナルを開いて** 以下を実行してください。パスワードを聞かれたら入力してください。
+> Syncthing をインストールします。**先ほど tmux を入れた WSL ウィンドウ（2 番目のウィンドウ）を再利用**してください。そこのターミナルで：
 >
 > ```bash
-> sudo apt update && sudo apt install -y syncthing
+> sudo apt install -y syncthing
 > ```
+>
+> （`apt update` は tmux install 時に既に走ってるので省略可）
 >
 > install 完了したら教えてください。
 
