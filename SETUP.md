@@ -28,34 +28,71 @@ which tmux
 
 ### 1.2 同期サービス（Syncthing 推奨・Drive はフォールバック）
 
-#### Syncthing の場合
+Claude Code は以下を順番に確認・案内してください。**1 ステップずつ生徒の応答を待つ**こと（一気に説明しない）。
+
+#### Syncthing の場合（推奨）
+
+##### 1.2.1 install チェック
 
 ```bash
 which syncthing
 ```
 
-無ければ：
+未 install なら以下を案内：
 
-| OS | コマンド |
-|---|---|
-| Ubuntu / WSL | `sudo apt install syncthing` |
-| Mac | `brew install syncthing` |
-| Windows | https://syncthing.net/downloads/ から SyncTrayzor |
+> Syncthing をインストールします。**別の WSL ターミナルを開いて** 以下を実行してください。パスワードを聞かれたら入力してください。
+>
+> ```bash
+> sudo apt update && sudo apt install -y syncthing
+> ```
+>
+> install 完了したら教えてください。
 
-インストール後、Web UI（http://localhost:8384）にアクセスできれば OK。
+（Mac の場合は `brew install syncthing`、Windows native の場合は SyncTrayzor https://github.com/canton7/SyncTrayzor/releases）
 
-生徒に以下を質問・案内：
+##### 1.2.2 syncthing 起動
 
-1. Syncthing 起動済か？（`syncthing` または OS タスクトレイの SyncTrayzor）
-2. 自分の Device ID を確認したか？（Web UI 右上「Actions」→「Show ID」）
-3. 先生に自分の Device ID を共有したか？
-4. 先生から folder share の招待が来ているか？受け入れて local path を `~/claude-class-inbox` に設定したか？
+```bash
+ps -ef | grep "[s]yncthing serve" | head -3
+```
 
-Syncthing が **両方向で接続済 + folder share 受領済** になっていれば、`~/claude-class-inbox/inbox/all/` 等が見えるはず。
+起動していなければ案内：
 
-#### Drive for desktop の場合
+> Syncthing を起動します。以下を別ターミナルで実行（このターミナルを閉じると停止するので、`tmux new -s syncthing` 内で動かすか `nohup ... &` で background 起動を推奨）：
+>
+> ```bash
+> nohup syncthing serve --no-browser > /tmp/syncthing.log 2>&1 &
+> ```
+>
+> 確認：`curl -s http://localhost:8384 | head -3` で HTML が返れば OK。
 
-ストリーム モードでも mirror モードでも可。生徒に：
+##### 1.2.3 Device ID 取得
+
+```bash
+syncthing cli show system 2>/dev/null | grep '"myID"'
+```
+
+または Web UI（http://localhost:8384）右上「Actions」→「Show ID」で QR コード付きで表示される。
+
+> あなたの Device ID は **`XXXX-XXXX-...`** です。これを先生に送ってください（LINE / Slack / メール何でも OK）。
+
+##### 1.2.4 先生からの folder 共有を待つ
+
+> 先生があなたの Device ID を承認して `claude-class-inbox` フォルダを共有すると、Web UI に「New Folder ... wants to share」の通知が出ます。
+>
+> 受け入れ時に local path を **`~/claude-class-inbox`** に設定してください。
+
+確認：
+
+```bash
+ls ~/claude-class-inbox/inbox/ 2>/dev/null
+```
+
+`all/` / `teacher/` / 自分の `student-<id>/` が見えれば同期成功。
+
+#### Drive for desktop の場合（フォールバック）
+
+Syncthing が動かない環境（企業 / 学校で port 遮断等）向け。
 
 1. Drive for desktop 起動済か？
 2. 先生から `claude-class-inbox/` フォルダの共有招待を受け入れたか？
