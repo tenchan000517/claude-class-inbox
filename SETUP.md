@@ -10,7 +10,9 @@ Claude Code がこの package を読んだ時に follow する setup 手順で�
 PACKAGE_DIR=$(cd "$(dirname "${0:-./SETUP.md}")" && pwd)
 ```
 
-## Step 1: tmux の確認
+## Step 1: tmux + 同期サービスの確認
+
+### 1.1 tmux
 
 ```bash
 which tmux
@@ -24,7 +26,40 @@ which tmux
 | Mac | `brew install tmux` |
 | Windows | WSL2 + Ubuntu を入れてその中で `sudo apt install tmux` |
 
-インストール後、再度 `which tmux` で確認。
+### 1.2 同期サービス（Syncthing 推奨・Drive はフォールバック）
+
+#### Syncthing の場合
+
+```bash
+which syncthing
+```
+
+無ければ：
+
+| OS | コマンド |
+|---|---|
+| Ubuntu / WSL | `sudo apt install syncthing` |
+| Mac | `brew install syncthing` |
+| Windows | https://syncthing.net/downloads/ から SyncTrayzor |
+
+インストール後、Web UI（http://localhost:8384）にアクセスできれば OK。
+
+生徒に以下を質問・案内：
+
+1. Syncthing 起動済か？（`syncthing` または OS タスクトレイの SyncTrayzor）
+2. 自分の Device ID を確認したか？（Web UI 右上「Actions」→「Show ID」）
+3. 先生に自分の Device ID を共有したか？
+4. 先生から folder share の招待が来ているか？受け入れて local path を `~/claude-class-inbox` に設定したか？
+
+Syncthing が **両方向で接続済 + folder share 受領済** になっていれば、`~/claude-class-inbox/inbox/all/` 等が見えるはず。
+
+#### Drive for desktop の場合
+
+ストリーム モードでも mirror モードでも可。生徒に：
+
+1. Drive for desktop 起動済か？
+2. 先生から `claude-class-inbox/` フォルダの共有招待を受け入れたか？
+3. `~/Google Drive/My Drive/claude-class-inbox/` または `~/Library/CloudStorage/GoogleDrive-<account>/My Drive/claude-class-inbox/` が見えるか？（OS により path 異なる）
 
 ## Step 2: 生徒情報の確認
 

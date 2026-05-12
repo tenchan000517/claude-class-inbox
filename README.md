@@ -1,6 +1,6 @@
 # claude-class-inbox
 
-授業で **先生から生徒の Claude Code セッションへ remote で指示を届ける** ための setup パッケージ。クラウド同期フォルダ + tmux + watcher の組み合わせで動く。
+授業で **先生から生徒の Claude Code セッションへ remote で指示を届ける** ための setup パッケージ。Syncthing（推奨）or Google Drive で `~/claude-class-inbox/` を端末間同期し、tmux + watcher で Claude Code pane に自動投入。
 
 ---
 
@@ -12,7 +12,7 @@
 
 これで以下が自動で完了します：
 
-- tmux インストール確認
+- tmux + Syncthing（or Drive）インストール確認
 - 必要情報（student-id・tmux session 名・同期フォルダ path）の確認
 - `.env` 書き出し
 - `~/.claude/skills/class-inbox/` への skill 登録
@@ -25,51 +25,80 @@ setup 完了後は、Claude Code 内で `/class-inbox` や「クラスメッセ�
 
 ## 🧑‍🏫 先生：事前準備
 
-1. **このリポジトリのクローン**：
+### Option A: Syncthing（推奨）
 
-   ```bash
-   git clone https://github.com/tenchan000517/claude-class-inbox.git
-   cd claude-class-inbox
-   ```
+P2P 同期。中央サーバ不要・Google アカウント不要・LAN なら高速・cross-network も OK・完全 open source。授業の教材価値も高い。
 
-2. **クラウド同期サービスの選定** — 推奨：Google Drive（15GB 無料・招待 UI 完結）
+#### 1. Syncthing のインストール
 
-3. **共有フォルダ作成**：
+| OS | 方法 |
+|---|---|
+| Ubuntu / WSL | `sudo apt install syncthing` |
+| Mac | `brew install syncthing` |
+| Windows | https://syncthing.net/downloads/ から SyncTrayzor |
 
-   ```
-   ~/claude-class-inbox/
-   ├── inbox/
-   │   ├── all/                # 全員へのブロードキャスト
-   │   ├── teacher/            # 生徒 → 先生の返信受信箱
-   │   ├── student-alice/      # alice 個人宛
-   │   └── student-bob/        # bob 個人宛
-   ```
+#### 2. Syncthing 起動 + 自分の Device ID 確認
 
-   各生徒に **編集者** 権限で共有招待。生徒は自分の `~/claude-class-inbox/` として同期するよう設定。
+```bash
+syncthing
+```
 
-4. **メッセージ送信**（先生 PC で）：
+Web UI（http://localhost:8384）が開く。右上「Actions」→「Show ID」で自分の Device ID を確認（`XXXX-XXXX-...` 形式）。
 
-   ```bash
-   bash teacher/send.sh alice today-task body.md
-   echo "今日の課題: ..." | bash teacher/send.sh all today-task -
-   ```
+#### 3. ローカル folder 作成 + Syncthing に登録
 
-5. **クラウドクリーンアップ**（節目で実施）：
+```bash
+mkdir -p ~/claude-class-inbox/inbox/{all,teacher,student-kawai,student-kawasaki}
+```
 
-   ```bash
-   bash teacher/cleanup.sh --dry-run --target all     # 事前確認
-   bash teacher/cleanup.sh --target all               # 全員宛をクリーン
-   bash teacher/cleanup.sh --target everything        # 学期末・全クリーン
-   ```
+Web UI で「Add Folder」：
+- Folder Path: `~/claude-class-inbox`（or 同期したい path）
+- Folder ID: 任意（例: `class-inbox-2026`）
+
+#### 4. 生徒 Device の追加 + folder 共有
+
+生徒から Device ID をもらったら、Web UI「Add Remote Device」で追加。share 対象 folder にチェック。
+
+#### 5. メッセージ送信
+
+```bash
+git clone https://github.com/tenchan000517/claude-class-inbox.git
+cd claude-class-inbox
+bash teacher/send.sh kawai today-task body.md
+echo "今日の課題: ..." | bash teacher/send.sh all today-task -
+```
+
+数秒で生徒 PC に同期される。
+
+---
+
+### Option B: Google Drive（フォールバック）
+
+Syncthing が動かない環境（企業 / 学校ネットワークで Syncthing ポート遮断等）向け。
+
+1. Drive for desktop インストール（https://www.google.com/drive/download/）
+2. ストリーム モードで OK（実 disk 使用は metadata のみ）
+3. My Drive 直下に `claude-class-inbox/inbox/{all,teacher,student-<id>}/` を作成
+4. 各生徒 Google アカウントに `claude-class-inbox/` を編集者権限で共有招待
+
+---
+
+### クラウドクリーンアップ（節目で実施）
+
+```bash
+bash teacher/cleanup.sh --dry-run --target all     # 事前確認
+bash teacher/cleanup.sh --target all               # 全員宛をクリーン
+bash teacher/cleanup.sh --target everything        # 学期末・全クリーン
+```
 
 ---
 
 ## アーキテクチャ
 
 ```
-先生 PC                   クラウド同期                生徒 PC
-                         (Drive/Dropbox/Syncthing)
- teacher/send.sh ---> ~/claude-class-inbox/inbox/alice/ ---> watcher
+先生 PC                   同期層                       生徒 PC
+                         (Syncthing / Drive)
+ teacher/send.sh ---> ~/claude-class-inbox/inbox/kawai/ ---> watcher
                   \                                    \
                    --> ~/claude-class-inbox/inbox/all/  --> tmux send-keys
                                                          --> Claude Code pane
@@ -108,23 +137,21 @@ claude-class-inbox/
 | 操作 | 生徒 | 先生 |
 |---|---|---|
 | 自分宛 inbox を local download | ◯ | - |
-| 自分宛 inbox をクラウド削除 | ◯ | - |
+| 自分宛 inbox をクリーン | ◯ | - |
 | 全員宛 inbox を local copy | ◯（read-only） | ◯ |
-| 全員宛 inbox をクラウド削除 | ✕ | ◯ |
-| 他生徒 inbox をクラウド削除 | ✕ | ◯ |
-| 先生宛 inbox をクラウド削除 | ✕ | ◯ |
+| 全員宛 inbox をクリーン | ✕ | ◯ |
+| 他生徒 inbox をクリーン | ✕ | ◯ |
+| 先生宛 inbox をクリーン | ✕ | ◯ |
 | 学期末の全クリーン | ✕ | ◯ |
 
 ---
 
 ## 更新時
 
-パッケージが更新された時は、生徒側で：
-
 ```bash
 cd <package-path>
 git pull
-bash scripts/install-skill.sh    # skill を再生成（template に変更があった時）
+bash scripts/install-skill.sh    # skill を再生成
 ```
 
 ---
