@@ -1,0 +1,18 @@
+# 個別環境設定
+.env
+
+# inbox 内のメッセージ実体（直接コミット禁止）
+inbox/**/*.md
+!inbox/**/.gitkeep
+
+# local archive
+class-inbox-archive/
+class-inbox-teacher-archive/
+
+# watcher log / marker
+/tmp/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
