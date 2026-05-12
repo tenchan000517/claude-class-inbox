@@ -44,11 +44,13 @@ which tmux
 
 未 install なら：
 
-> Syncthing をインストールします。**別の WSL Ubuntu ターミナルを開いて**（VS Code 下部メニュー → ターミナル → 新規 → WSL Ubuntu を選択）、以下を実行してください。パスワードを聞かれたら入力：
+> tmux をインストールします。**別の WSL Ubuntu ターミナルを開いて**（VS Code 下部メニュー → ターミナル → 新規 → WSL Ubuntu を選択）、以下を実行してください。パスワードを聞かれたら入力：
 >
 > ```bash
 > sudo apt update && sudo apt install -y tmux
 > ```
+>
+> install 完了したら、このターミナルに戻って「インストール完了」と伝えてください。
 
 ### 1.2 同期サービス（Syncthing 推奨）
 
@@ -147,36 +149,64 @@ bash <PACKAGE_DIR>/scripts/install-skill.sh
 
 ---
 
-## Step 5: watcher を起動
+## Step 5: 初回 setup 完了 + tmux 移行の案内
+
+ここまでで環境構築・skill 登録は完了。watcher の起動は **次のステップ（tmux 移行後・skill が自動で実施）** に委ねます。初回 setup ではここで一度 Claude Code を抜けて、tmux 上で再起動する流れを生徒に教えてください：
+
+### 5.1 一度この Claude Code を終了
+
+Claude Code 内で `Ctrl-C` を 2 回 or `exit` で抜けてもらう。
+
+### 5.2 tmux とは何か（生徒が初めての場合は短く説明）
+
+> tmux は「ターミナルの中で複数の session を持てる仕組み」です。Claude Code を tmux の中で動かす理由：
+>
+> 1. PC を一度閉じても session が残るので、戻れる
+> 2. 先生からのメッセージを watcher が tmux 経由で自動投入できる（class-inbox の必須要件）
+
+### 5.3 tmux 起動 + Claude Code 再起動
+
+別ターミナル（同じ WSL Ubuntu）で：
 
 ```bash
-cd <PACKAGE_DIR>
-nohup env $(cat .env | xargs) bash scripts/student-watch.sh > /tmp/class-inbox-watcher.log 2>&1 &
+cd /mnt/c/task/class
+tmux new -s claude
 ```
 
-起動確認：
+`tmux new -s claude` を打つと session が起動して自動的に attach 状態になる（プロンプトの見た目が変わる）。中で：
 
 ```bash
-ps -ef | grep student-watch | grep -v grep
+claude
 ```
+
+これで tmux 内 Claude Code が起動。
+
+### 5.4 「授業準備」を呼ぶ
+
+Claude Code 内で：
+
+> 授業準備
+
+skill が起動して：
+- syncthing 稼働チェック（必要なら起動）
+- 先生 PC との接続チェック
+- watcher 起動（tmux pane 自動投入を有効化）
+- 新着メッセージ表示
+
+これでレク開始可能な状態に。
 
 ---
 
-## Step 6: 日常運用フローの案内
+## Step 6: 日常運用（毎回のレクで生徒がやること）
 
-setup 完了。生徒に以下を明示伝達：
+```bash
+cd /mnt/c/task/class
+tmux attach -t claude     # 既存 session なら attach / 無ければ tmux new -s claude
+```
 
-### 6.1 毎回のレクで必要な操作
+中で Claude Code が動いていれば「授業準備」と発言、無ければ `claude` で起動 → 「授業準備」。
 
-1. VS Code を開く
-2. 下部メニュー → ターミナル → 新規 → **WSL Ubuntu** を選択（cmd / PowerShell ではない）
-3. `cd /mnt/c/task/class/`
-4. `tmux new -s claude` （session が既にあれば `tmux attach -t claude`）
-5. `claude`
-6. Claude Code 内で「**授業準備**」or `/class-inbox start` と発言
-7. skill が自動で syncthing 起動 / watcher 起動 / 新着メッセージ表示
-
-### 6.2 離脱 / 復帰
+### 6.1 離脱 / 復帰
 
 | 操作 | コマンド |
 |---|---|
@@ -185,17 +215,24 @@ setup 完了。生徒に以下を明示伝達：
 | session 一覧 | `tmux ls` |
 | 完全終了 | `tmux kill-session -t claude` |
 
-### 6.3 PC 再起動後
+### 6.2 PC 再起動後
 
-PC を再起動すると tmux / syncthing / watcher 全部止まる。再起動後は 6.1 の流れを最初からやり直し。
+PC を再起動すると tmux / syncthing / watcher 全部止まる。再起動後：
 
-### 6.4 skill 経由の操作
+```bash
+cd /mnt/c/task/class
+tmux new -s claude
+claude
+```
 
-Claude Code 内（tmux attach 後）で：
+中で「授業準備」と発言。skill が syncthing / watcher を再起動してくれる。
 
-- `/class-inbox` で skill 起動
-- 「クラスメッセージ確認」「先生に返信」等の自然言語でも反応
-- `/class-inbox archive` で local 保存（容量整理）
+### 6.3 skill 経由の操作
+
+- 「授業準備」or `/class-inbox start` でレク開始準備
+- 「クラスメッセージ確認」で新着確認
+- 「先生に返信」で返信送信
+- 「archive」で自分宛 inbox を local 保存（容量整理）
 
 ---
 
