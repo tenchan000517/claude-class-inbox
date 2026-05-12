@@ -14,6 +14,16 @@
 
 set -u
 
+# .env を自動 source（同ディレクトリの親 = PACKAGE_DIR を探す）
+PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$PACKAGE_DIR/.env"
+if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    set -a
+    source "$ENV_FILE"
+    set +a
+fi
+
 TARGET="${1:-}"
 TOPIC="${2:-}"
 BODY_SRC="${3:-}"
