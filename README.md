@@ -73,7 +73,7 @@ Web UI: http://localhost:8384
 #### 3. folder 構造の作成 + Syncthing 登録
 
 ```bash
-mkdir -p /mnt/c/task/class/inbox/{all,teacher,student-kawai,student-kawasaki}
+mkdir -p /mnt/c/task/class/inbox/{all,teacher,student-alice,student-bob}
 ```
 
 Web UI「フォルダーを追加」：
@@ -95,7 +95,7 @@ git clone https://github.com/tenchan000517/claude-class-inbox.git /mnt/c/task/cl
 
 ```bash
 cd /mnt/c/task/class/claude-class-inbox
-bash teacher/send.sh kawai today-task body.md
+bash teacher/send.sh alice today-task body.md
 echo "今日の課題: ..." | bash teacher/send.sh all today-task -
 ```
 
@@ -121,7 +121,7 @@ bash teacher/cleanup.sh --target everything    # 学期末・全クリーン
 ```
 先生 PC                       同期層                       生徒 PC
                             (Syncthing / Drive)
- teacher/send.sh ---> /mnt/c/task/class/inbox/kawai/ ---> watcher
+ teacher/send.sh ---> /mnt/c/task/class/inbox/alice/ ---> watcher
                   \                                  \
                    --> /mnt/c/task/class/inbox/all/   --> tmux send-keys
                                                       --> Claude Code pane

@@ -126,7 +126,7 @@ ls /mnt/c/task/class/inbox/ 2>/dev/null
 
 生徒に質問：
 
-- **student-id**：先生から指定された ID（例：`kawai`、`kawasaki`）
+- **student-id**：先生から指定された ID（例：`alice`、`bob`・小文字英数とハイフンのみ）
 - **tmux session 名**：default は `claude`
 
 ---
