@@ -112,7 +112,7 @@ syncthing cli show system 2>/dev/null | grep myID
 >
 > 受け入れ時に local path を **`/mnt/c/task/class`** に設定してください（`~/claude-class-inbox` ではない・安全圏に置くため）。
 >
-> 注：folder の中身は `inbox/all/`, `inbox/teacher/`, `inbox/student-<id>/` の構造で、これが local path 配下に展開されます。local path に `inbox` を含めない（含めると `inbox/inbox/` の重複が発生）。
+> 注：folder の中身は `inbox/all/`, `inbox/teacher/`, `inbox/<id>/` の構造で、これが local path 配下に展開されます。local path に `inbox` を含めない（含めると `inbox/inbox/` の重複が発生）。folder 名は student-id と同一（prefix なし）。
 
 確認：
 
@@ -120,7 +120,7 @@ syncthing cli show system 2>/dev/null | grep myID
 ls /mnt/c/task/class/inbox/ 2>/dev/null
 ```
 
-`all/` / `teacher/` / 自分の `student-<id>/` が見えれば同期成功。
+`all/` / `teacher/` / 自分の `<id>/` が見えれば同期成功。
 
 ---
 
@@ -252,7 +252,7 @@ claude
 - tmux 稼働：`tmux ls`
 - syncthing 稼働：`ps -ef | grep syncthing | grep -v grep`
 - **watcher 稼働**：Claude Code 画面下部の background task インジケーター or Claude Code に「Monitor tool の稼働 task を見せて」と確認
-- 同期 folder にファイル：`ls /mnt/c/task/class/inbox/inbox/student-<self-id>/`（重複構造に注意）
+- 同期 folder にファイル：`ls /mnt/c/task/class/inbox/inbox/<self-id>/`（重複構造に注意）
 - 処理済リスト：`cat /tmp/class-inbox-processed-<self-id>` （watcher が dispatch 済のファイル一覧）
 - syncthing log：`tail /tmp/syncthing.log`
 

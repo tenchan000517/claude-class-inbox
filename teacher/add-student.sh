@@ -9,7 +9,7 @@
 #   bash add-student.sh student1
 #
 # 動作:
-# - $SYNC_ROOT/inbox/student-<id>/ を mkdir
+# - $SYNC_ROOT/inbox/<id>/ を mkdir
 # - Syncthing が数秒で生徒側にも同期する
 #
 # 設計意図:
@@ -42,7 +42,7 @@ if ! [[ "$STUDENT_ID" =~ ^[a-z0-9-]+$ ]]; then
     exit 2
 fi
 
-INBOX_DIR="$SYNC_ROOT/inbox/student-$STUDENT_ID"
+INBOX_DIR="$SYNC_ROOT/inbox/$STUDENT_ID"
 
 if [ -d "$INBOX_DIR" ]; then
     echo "[INFO] 既に存在: $INBOX_DIR"
@@ -53,4 +53,4 @@ fi
 
 echo ""
 echo "Syncthing が数秒で生徒側に同期します。"
-echo "生徒側で確認: ls /mnt/c/task/class/inbox/inbox/student-$STUDENT_ID/"
+echo "生徒側で確認: ls /mnt/c/task/class/inbox/inbox/$STUDENT_ID/"

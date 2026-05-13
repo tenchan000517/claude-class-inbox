@@ -14,7 +14,7 @@ Claude Code の auto mode は **cwd 内では制限なく操作する**。`~` �
 /mnt/c/task/class/                  ← cwd（auto mode の安全圏）
 ├── claude-class-inbox/             ← clone した package（scripts / SETUP / .env）
 └── inbox/                          ← syncthing 同期 folder（メッセージ実体）
-    ├── all/ / teacher/ / student-<id>/
+    ├── all/ / teacher/ / <id>/
 ```
 
 clone 先 / sync folder / cwd すべて `/mnt/c/task/class/` 配下。**この path を逸脱した場合、skill は動作を拒否します**。
@@ -78,16 +78,16 @@ Web UI: http://localhost:8384
 mkdir -p /mnt/c/task/class/inbox/{all,teacher}
 ```
 
-生徒分の `student-<id>/` フォルダは **生徒の student-id を確定したタイミングで動的に作成**する（事前にハードコードしない）：
+生徒分の `<id>/` フォルダは **生徒の student-id を確定したタイミングで動的に作成**する（事前にハードコードしない）：
 
 ```bash
 # 新しい生徒（student-id が確定したら）
 bash teacher/add-student.sh <student-id>
 # または手動：
-mkdir -p /mnt/c/task/class/inbox/student-<student-id>
+mkdir -p /mnt/c/task/class/inbox/<student-id>
 ```
 
-Syncthing が `student-<id>/` フォルダを自動で生徒側に同期する。生徒が増えるたびにこの 1 行を実行するだけ。
+Syncthing が `<id>/` フォルダを自動で生徒側に同期する。生徒が増えるたびにこの 1 行を実行するだけ。folder 名は student-id と同一（prefix なし）→ SKILL.md template の `__SYNC_ROOT__/inbox/__STUDENT_ID__/` と整合。
 
 Web UI「フォルダーを追加」：
 - Folder Label: `class-inbox`
@@ -136,7 +136,7 @@ bash teacher/cleanup.sh --target everything    # 学期末・全クリーン
 ```
 先生 PC                       同期層                       生徒 PC
                             (Syncthing / Drive)
- teacher/send.sh ---> /mnt/c/task/class/inbox/student-<id>/ ---> Monitor tool
+ teacher/send.sh ---> /mnt/c/task/class/inbox/<id>/ ---> Monitor tool
                   \                                          \   (Claude Code 監視可能)
                    --> /mnt/c/task/class/inbox/all/           --> tmux send-keys
                                                               --> Claude Code pane
