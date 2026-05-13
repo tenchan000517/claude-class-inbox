@@ -110,7 +110,9 @@ syncthing cli show system 2>/dev/null | grep myID
 
 > 先生があなたの Device ID を承認して `claude-class-inbox` フォルダを共有すると、Web UI（http://localhost:8384）に「New Folder ... wants to share」の通知が出ます。
 >
-> 受け入れ時に local path を **`/mnt/c/task/class/inbox`** に設定してください（`~/claude-class-inbox` ではない・安全圏に置くため）。
+> 受け入れ時に local path を **`/mnt/c/task/class`** に設定してください（`~/claude-class-inbox` ではない・安全圏に置くため）。
+>
+> 注：folder の中身は `inbox/all/`, `inbox/teacher/`, `inbox/student-<id>/` の構造で、これが local path 配下に展開されます。local path に `inbox` を含めない（含めると `inbox/inbox/` の重複が発生）。
 
 確認：
 
@@ -126,7 +128,7 @@ ls /mnt/c/task/class/inbox/ 2>/dev/null
 
 生徒に質問：
 
-- **student-id**：先生から指定された ID（例：`alice`、`bob`・小文字英数とハイフンのみ）
+- **student-id**：先生から指定された ID（小文字英数とハイフンのみ・例：`alice`、`bob`、`student1`）
 - **tmux session 名**：default は `claude`
 
 ---
@@ -198,10 +200,10 @@ Claude Code 内で：
 skill が起動して：
 - syncthing 稼働チェック（必要なら起動）
 - 先生 PC との接続チェック
-- watcher 起動（tmux pane 自動投入を有効化）
+- **Monitor tool 経由で watcher を起動**（Claude Code 監視可能・nohup ではない・tmux pane 自動投入を有効化）
 - 新着メッセージ表示
 
-これでレク開始可能な状態に。
+これでレク開始可能な状態に。Claude Code 画面下部に「N background tasks」のインジケーターが出れば watcher が Claude Code 監視下で動いている証拠。
 
 ---
 
@@ -249,7 +251,13 @@ claude
 - 安全圏か：`pwd` が `/mnt/c/task/class/` 配下か
 - tmux 稼働：`tmux ls`
 - syncthing 稼働：`ps -ef | grep syncthing | grep -v grep`
-- watcher 稼働：`ps -ef | grep student-watch | grep -v grep`
-- 同期 folder にファイル：`ls /mnt/c/task/class/inbox/<self>/`
-- watcher log：`tail /tmp/class-inbox-watcher.log`
+- **watcher 稼働**：Claude Code 画面下部の background task インジケーター or Claude Code に「Monitor tool の稼働 task を見せて」と確認
+- 同期 folder にファイル：`ls /mnt/c/task/class/inbox/inbox/student-<self-id>/`（重複構造に注意）
+- 処理済リスト：`cat /tmp/class-inbox-processed-<self-id>` （watcher が dispatch 済のファイル一覧）
 - syncthing log：`tail /tmp/syncthing.log`
+
+### よくある詰まり方と対処
+
+- **「授業準備」で 0 件と出るが実際にはファイルがある**：Claude Code の skill cache が古い可能性 → Claude Code 終了 → tmux 内で再起動 → 「授業準備」再実行
+- **watcher が新着を拾わない**：Monitor tool 経由起動になっているか確認。旧 nohup 起動の `student-watch.sh` が残っていれば `pkill -f student-watch.sh` で停止 → Monitor tool で再起動
+- **path 重複（inbox/inbox）が気になる**：これは Syncthing folder root（`/mnt/c/task/class`）+ 中身 `inbox/` 構造で正常。SYNC_ROOT は `/mnt/c/task/class` で SKILL.md は `__SYNC_ROOT__/inbox/...` を参照する

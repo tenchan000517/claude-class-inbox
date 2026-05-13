@@ -72,9 +72,22 @@ Web UI: http://localhost:8384
 
 #### 3. folder 構造の作成 + Syncthing 登録
 
+最低限必要なのは `all/` と `teacher/` のみ：
+
 ```bash
-mkdir -p /mnt/c/task/class/inbox/{all,teacher,student-alice,student-bob}
+mkdir -p /mnt/c/task/class/inbox/{all,teacher}
 ```
+
+生徒分の `student-<id>/` フォルダは **生徒の student-id を確定したタイミングで動的に作成**する（事前にハードコードしない）：
+
+```bash
+# 新しい生徒（student-id が確定したら）
+bash teacher/add-student.sh <student-id>
+# または手動：
+mkdir -p /mnt/c/task/class/inbox/student-<student-id>
+```
+
+Syncthing が `student-<id>/` フォルダを自動で生徒側に同期する。生徒が増えるたびにこの 1 行を実行するだけ。
 
 Web UI「フォルダーを追加」：
 - Folder Label: `class-inbox`
@@ -95,7 +108,9 @@ git clone https://github.com/tenchan000517/claude-class-inbox.git /mnt/c/task/cl
 
 ```bash
 cd /mnt/c/task/class/claude-class-inbox
-bash teacher/send.sh alice today-task body.md
+# 個別生徒宛（<student-id> は対象生徒の ID）
+bash teacher/send.sh <student-id> today-task body.md
+# 全員宛
 echo "今日の課題: ..." | bash teacher/send.sh all today-task -
 ```
 
@@ -121,11 +136,13 @@ bash teacher/cleanup.sh --target everything    # 学期末・全クリーン
 ```
 先生 PC                       同期層                       生徒 PC
                             (Syncthing / Drive)
- teacher/send.sh ---> /mnt/c/task/class/inbox/alice/ ---> watcher
-                  \                                  \
-                   --> /mnt/c/task/class/inbox/all/   --> tmux send-keys
-                                                      --> Claude Code pane
+ teacher/send.sh ---> /mnt/c/task/class/inbox/student-<id>/ ---> Monitor tool
+                  \                                          \   (Claude Code 監視可能)
+                   --> /mnt/c/task/class/inbox/all/           --> tmux send-keys
+                                                              --> Claude Code pane
 ```
+
+watcher は生徒側 Claude Code が **Monitor tool** で起動する（`nohup` でデタッチしない）。これにより Claude Code が watcher 稼働を監視・通知できる。検知方式は **処理済リスト方式**（mtime 非依存）で、Syncthing の同期 mtime 保持問題の影響を受けない。
 
 詳細は [SETUP.md](./SETUP.md) を参照。
 

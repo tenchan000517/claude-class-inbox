@@ -95,18 +95,53 @@ syncthing cli show connections 2>/dev/null
 
 > 先生 PC への Syncthing 接続が確立されていません。先生 PC が起動してオンラインか、Device ID 共有が完了しているか確認してください。
 
-### 3. watcher 起動チェック
+### 3. watcher 起動チェック（Monitor tool 経由）
+
+Claude Code の **Monitor tool** で watcher が稼働中か確認。稼働していなければ、Monitor tool で以下を起動する（**nohup ではなく Monitor tool で起動することで Claude Code が監視可能になる**）。
+
+| Monitor 設定 | 値 |
+|---|---|
+| description | `class-inbox watcher (__STUDENT_ID__)` |
+| persistent | `true` |
+| timeout_ms | `3600000` |
+| command | 下記スクリプト |
 
 ```bash
-ps -ef | grep "[s]tudent-watch" | head -3
+STUDENT_ID="__STUDENT_ID__"
+CLAUDE_SESSION="__CLAUDE_SESSION__"
+SYNC_ROOT="__SYNC_ROOT__"
+PROCESSED="/tmp/class-inbox-processed-$STUDENT_ID"
+touch "$PROCESSED"
+TARGET="$CLAUDE_SESSION:0.0"
+
+dispatch() {
+  local inbox="$1" label="$2"
+  for f in "$inbox"/*.md; do
+    [ -e "$f" ] || continue
+    if ! grep -Fxq "$f" "$PROCESSED"; then
+      echo "[$(date +%T)] NEW ($label): $(basename "$f")"
+      if tmux list-panes -t "$TARGET" &>/dev/null; then
+        tmux send-keys -t "$TARGET" -- "新着メッセージ ($label) を読んで対応してください: $f"
+        sleep 0.5
+        tmux send-keys -t "$TARGET" C-m
+      fi
+      echo "$f" >> "$PROCESSED"
+    fi
+  done
+}
+
+while true; do
+  dispatch "$SYNC_ROOT/inbox/$STUDENT_ID" "自分宛"
+  dispatch "$SYNC_ROOT/inbox/all" "全員宛"
+  sleep 5
+done
 ```
 
-未起動なら：
+設計ポイント：
+- **処理済リスト方式**（`$PROCESSED` ファイルで dispatch 済を管理）→ Syncthing の mtime 保持問題に影響されない
+- **Monitor tool 経由**で起動するため、Claude Code が watcher 稼働を監視・通知できる（旧 nohup 方式は監視外だった）
 
-```bash
-cd __PACKAGE_DIR__
-nohup env $(cat .env | xargs) bash scripts/student-watch.sh > /tmp/class-inbox-watcher.log 2>&1 &
-```
+旧 `scripts/student-watch.sh` は historical reference として残るが、本 skill では使わない。
 
 ### 4. 新着メッセージ確認
 
@@ -183,9 +218,18 @@ archive 先：`~/class-inbox-archive/__STUDENT_ID__-<timestamp>/`
 
 ### watcher 再起動
 
+旧 watcher プロセスがあれば停止：
+
 ```bash
 pkill -f student-watch.sh
-cd __PACKAGE_DIR__ && nohup env $(cat .env | xargs) bash scripts/student-watch.sh > /tmp/class-inbox-watcher.log 2>&1 &
+```
+
+その後、§「授業準備」§3 の Monitor tool 起動手順を再実行（処理済リストは `$PROCESSED` ファイルにあるので、再起動しても既処理ファイルは再 dispatch されない）。
+
+完全に最初から拾い直したい場合は `$PROCESSED` ファイルを削除してから Monitor 再起動：
+
+```bash
+rm -f /tmp/class-inbox-processed-__STUDENT_ID__
 ```
 
 ---
