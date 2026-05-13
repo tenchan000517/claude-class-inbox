@@ -6,7 +6,7 @@
 #
 # 例:
 #   bash add-student.sh alice
-#   bash add-student.sh kawai
+#   bash add-student.sh student1
 #
 # 動作:
 # - $SYNC_ROOT/inbox/student-<id>/ を mkdir
