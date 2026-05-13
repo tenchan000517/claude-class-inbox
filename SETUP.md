@@ -34,6 +34,50 @@ pwd
 
 ---
 
+## ⚠️ Step 0.5: Claude Code バージョン確認（最重要）
+
+class-inbox skill は **Monitor tool** と **ToolSearch**（deferred tool 読込機構）を使う設計のため、これらが含まれる **Claude Code v2.1.121 以上が必須**。
+
+```bash
+claude --version
+```
+
+または `/diagnostics` コマンドで詳細確認。
+
+### バージョンチェック判定
+
+| バージョン | 対応 |
+|---|---|
+| **v2.1.121 以上** | OK・次の Step に進む |
+| **v2.1.121 未満** | **作業を中断**して生徒にアップデートを案内 |
+
+### v2.1.121 未満の場合の案内
+
+> Claude Code が古い版です。class-inbox の watcher は Monitor tool を使う設計のため、最新版へのアップデートが必要です：
+>
+> ```bash
+> # 古い npm-global 版があれば削除（複数インストール解消）
+> npm -g uninstall @anthropic-ai/claude-code 2>/dev/null
+>
+> # 設定整合（native installation に揃える）
+> claude install
+>
+> # 最新版に更新
+> claude update
+>
+> # 確認
+> claude --version
+> ```
+>
+> アップデート後、Claude Code を一度終了して再起動し、再度この skill（or「授業準備」コマンド）を呼び出してください。
+
+参考：
+- Monitor tool 導入：v2.1.98（2026/4/9）
+- ToolSearch 導入：v2.1.121（2026/4/28）
+- 最新（2026/5 時点）：v2.1.140
+
+---
+
 ## Step 1: tmux + 同期サービスの確認
 
 ### 1.1 tmux
