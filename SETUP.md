@@ -106,25 +106,62 @@ syncthing cli show system 2>/dev/null | grep myID
 
 > あなたの Device ID は **`XXXX-XXXX-...`** です。これを先生に送ってください（LINE / Slack / メール何でも OK）。
 
-#### 1.2.4 先生からの folder 共有を待つ
+#### 1.2.4 先生からの folder 共有を待つ + 接続成立 + 同期完了の 3 段階確認
 
-> 先生があなたの Device ID を承認して `claude-class-inbox` フォルダを共有すると、Web UI（http://localhost:8384）に「New Folder ... wants to share」の通知が出ます。
->
-> 受け入れ時に local path を **`/mnt/c/task/class`** に設定してください（`~/claude-class-inbox` ではない・安全圏に置くため）。
->
-> 注：folder の中身は `inbox/all/`, `inbox/teacher/`, `inbox/<id>/` の構造で、これが local path 配下に展開されます。local path に `inbox` を含めない（含めると `inbox/inbox/` の重複が発生）。folder 名は student-id と同一（prefix なし）。
+**この Step は Step 2 に進むための必須前提。3 段階すべての確認が完了するまで Step 2 に進ませないこと。** 不完全な状態で進めると、teacher 側との Syncthing 接続が確立していないまま .env や skill 登録が進み、後で「メッセージが届かない / folder 構造が崩れる」等の問題が発生する。
 
-確認：
+##### 段階 1: Device ID を先生に共有 + 先生に Web UI 操作を依頼
+
+> あなたの Device ID は **`<上記の myID>`** です。これを先生に送ってください（LINE / Slack / メール等）。
+>
+> 先生に以下を依頼してください：
+> 1. teacher 側 Web UI（http://localhost:8384）で「+ 接続先デバイスを追加」→ あなたの Device ID 貼付 → 保存
+> 2. folder `class-inbox-2026`「編集」→「共有」タブ → あなたにチェック → 保存
+> 3. teacher 側で `bash teacher/add-student.sh <あなたの student-id>` を実行（あなた専用の inbox folder を作成）
+
+##### 段階 2: Syncthing 接続成立確認（必須）
+
+```bash
+syncthing cli show connections 2>/dev/null | python3 -c "
+import sys, json
+c = json.load(sys.stdin)
+conns = c.get('connections', {})
+active = [k for k, v in conns.items() if v.get('connected')]
+print(f'接続中デバイス: {len(active)} 件')
+for k in active:
+    print(f'  - {k[:7]}...')
+"
+```
+
+**接続中デバイスが 0 件なら次に進まない**。先生に Web UI 操作（段階 1）を再依頼。
+
+##### 段階 3: folder 同期完了確認（必須）
 
 ```bash
 ls /mnt/c/task/class/inbox/ 2>/dev/null
 ```
 
-`all/` / `teacher/` / 自分の `<id>/` が見えれば同期成功。
+期待される出力（順不同）：
+- `all/`（**必須**）
+- `<自分の student-id>/`（**必須**）
+- `teacher/`
+
+**`teacher/` だけが見える状態は「同期未完了」or「前回テストの残骸」**。`all/` と 自分の `<id>/` が**両方揃わない限り Step 2 に進ませないこと**。
+
+数分待っても揃わない場合の確認事項：
+- 先生に「teacher 側で `bash teacher/add-student.sh <student-id>` を実行したか」確認
+- 先生に「folder 共有設定で あなたを共有相手にチェックしたか」確認
+- 自分の Web UI で folder 受け入れ + local path = **`/mnt/c/task/class`**（`inbox` 含めない）になっているか確認
+
+##### 補足：folder 構造と path の重複回避
+
+folder の中身は `inbox/all/`, `inbox/teacher/`, `inbox/<id>/` の構造。これが local path 配下に展開されるので、local path = **`/mnt/c/task/class`**（`inbox` を**含めない**）が正解。`inbox` を含めると `/mnt/c/task/class/inbox/inbox/` の重複が発生する。folder 名は student-id と同一（prefix なし・SKILL.md template の `__SYNC_ROOT__/inbox/__STUDENT_ID__/` と整合）。
 
 ---
 
 ## Step 2: 生徒情報の確認
+
+**前提**：Step 1.2.4 の段階 1〜3 がすべて完了していること。特に「接続中デバイス 1 件以上」「`all/` と 自分の `<id>/` が両方見える」を満たさない場合、本 Step に進まずに Step 1.2.4 を再実行すること。
 
 生徒に質問：
 
