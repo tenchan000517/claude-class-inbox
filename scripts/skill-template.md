@@ -195,7 +195,20 @@ timestamp: <ISO8601>
 <body>
 ```
 
-数秒で先生 PC に同期される。
+**Write 直後に Syncthing rescan を強制トリガー**（必須・省略禁止）。Syncthing の fsWatcher が新規ファイルを取りこぼすことがあり、これを省くと先生側に届くのが大幅に遅延する or 届かない事態が発生する：
+
+```bash
+# Syncthing config の場所は環境によって異なる（~/.local/state/syncthing/ or ~/.config/syncthing/）
+for CFG in ~/.local/state/syncthing/config.xml ~/.config/syncthing/config.xml; do
+  if [ -f "$CFG" ]; then
+    APIKEY=$(grep '<apikey>' "$CFG" | sed 's/.*<apikey>\(.*\)<\/apikey>.*/\1/')
+    curl -s -X POST -H "X-API-Key: $APIKEY" "http://localhost:8384/rest/db/scan?folder=class-inbox-2026" > /dev/null
+    break
+  fi
+done
+```
+
+これで数秒で先生 PC に同期される。**この rescan trigger を組み込まないと、生徒の返信が teacher 側に届かない問題が再発するため、返信送信フローでは必須**。
 
 ### archive（自分宛のみ・生徒側で実施可）
 
